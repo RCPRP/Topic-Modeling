@@ -1,0 +1,61 @@
+!gdown 1gGazb-hGBiJnVy4WCoWFOFfzPdhlmqrV
+
+!pip install gensim
+!pip uninstall -y numpy scipy gensim
+!pip install numpy==1.23.5 scipy==1.10.1 gensim==4.3.1
+
+
+!pip install nltk
+!pip install wordcloud
+import nltk
+nltk.download('all')
+
+
+import pandas as pd
+import numpy as np
+
+review_data = pd.read_json("Musical_Instruments_5.json", lines=True)
+review_data
+review_data["reviewTime"] = pd.to_datetime(review_data["reviewTime"], format="%m %d, %Y")
+
+from nltk.tokenize import word_tokenize
+from wordcloud import WordCloud
+from matplotlib import pyplot as plt
+
+from collections import Counter
+def flatten(list_of_lists):
+    flat_list = []
+    for  l in list_of_lists:
+        flat_list.extend(l)
+    return flat_list
+
+def wordcloud_plot(counter_all):
+    w = WordCloud().generate_from_frequencies(frequencies=dict(counter_all))
+    plt.imshow(w)
+
+def tokenize(text):
+    tokens = [w for w in word_tokenize(text.lower())]
+    return tokens
+
+counter_all = Counter(flatten(review_data["reviewText"].apply(tokenize).tolist()))
+counter_all.most_common(10)
+
+#wordcloud_plot(counter_all)
+
+from nltk.corpus import stopwords
+
+english_stopwords = set(stopwords.words('english'))
+
+def tokenize_clean(text):
+    tokens = [w for w in word_tokenize(text.lower()) if w not in english_stopwords and w.isalpha()]
+    return tokens
+
+from gensim.corpora.dictionary import Dictionary
+from gensim.models import LdaModel
+tokenized_clean_reviews = review_data["reviewText"].apply(tokenize_clean)
+vocabulary = Dictionary(tokenized_clean_reviews)
+#vocabulary
+bag_of_words_documents = [vocabulary.doc2bow(text) for text in tokenized_clean_reviews]
+# bag_of_words_documents
+lda = LdaModel(bag_of_words_documents, num_topics=10, id2word=vocabulary)
+print(lda.print_topics())
